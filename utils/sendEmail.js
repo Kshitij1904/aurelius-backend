@@ -1,26 +1,8 @@
-const nodemailer = require("nodemailer");
+const { Resend } = require("resend");
 
-let transporter;
-
-const getTransporter = () => {
-  if (transporter) return transporter;
-
-  transporter = nodemailer.createTransport({
-    host: process.env.EMAIL_HOST || "smtp.gmail.com",
-    port: Number(process.env.EMAIL_PORT) || 587,
-    secure: Number(process.env.EMAIL_PORT) === 465, // auto secure
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-  });
-
-  return transporter;
-};
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 exports.sendOTPEmail = async (to, name, otp) => {
-  const transporter = getTransporter();
-
   const html = `
     <!DOCTYPE html>
     <html>
@@ -65,22 +47,15 @@ exports.sendOTPEmail = async (to, name, otp) => {
     </html>
   `;
 
-  if (process.env.NODE_ENV !== "production") {
-    console.log("📧 Sending OTP:", otp, "to:", to);
-  }
-
-  if (!process.env.EMAIL_USER || !process.env.EMAIL_PASS) {
-    throw new Error("Email service not configured properly");
-  }
-
   try {
-    const info = await transporter.sendMail({
-      from: `"Aurelius Finance" <${process.env.EMAIL_USER}>`,
+    const response = await resend.emails.send({
+      from: "Aurelius <onboarding@resend.dev>",
       to,
       subject: `${otp} is your Aurelius verification code`,
       html,
     });
-    console.log("✅ Email sent:", info.messageId);
+
+    console.log("✅ Email sent:", response);
   } catch (err) {
     console.error("❌ EMAIL SEND ERROR:", err);
     throw err;
